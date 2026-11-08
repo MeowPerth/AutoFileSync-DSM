@@ -1,0 +1,23 @@
+[
+  {
+    "step_title": "卸載 AutoFileSync",
+    "items": [
+      {
+        "type": "singleselect",
+        "desc": "請選擇卸載時如何處理設定、任務、歷史與日誌：",
+        "subitems": [
+          {
+            "key": "wizard_keep_data",
+            "desc": "<b>保留</b>：保留全部資料，重新安裝後可繼續使用（預設）。",
+            "defaultValue": true
+          },
+          {
+            "key": "wizard_delete_data",
+            "desc": "<b style=\"color: red\">刪除</b>：刪除全部設定、任務、歷史與日誌，無法復原。",
+            "defaultValue": false
+          }
+        ]
+      }
+    ]
+  }
+]

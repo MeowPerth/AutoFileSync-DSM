@@ -1,0 +1,23 @@
+[
+  {
+    "step_title": "Uninstall AutoFileSync",
+    "items": [
+      {
+        "type": "singleselect",
+        "desc": "Choose how to handle the configuration, tasks, history and logs:",
+        "subitems": [
+          {
+            "key": "wizard_keep_data",
+            "desc": "<b>Keep</b>: keep all data for a future re-install (default).",
+            "defaultValue": true
+          },
+          {
+            "key": "wizard_delete_data",
+            "desc": "<b style=\"color: red\">Delete</b>: erase all configuration, tasks, history and logs. This cannot be undone.",
+            "defaultValue": false
+          }
+        ]
+      }
+    ]
+  }
+]

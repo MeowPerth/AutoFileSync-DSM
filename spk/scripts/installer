@@ -1,0 +1,191 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# AutoFileSync 通用安装器（DSM 7）
+# 结构对齐 spksrc mk/spksrc.service/installer.dsm7（裁剪版，自包含无外部依赖）：
+#   preinst/postinst/preuninst/postuninst/preupgrade/postupgrade
+# 六个薄壳脚本 source 本文件后调用同名函数。
+# 说明：安装/卸载阶段以 root 运行；启停阶段由 conf/privilege 决定。
+#       本套件以 run-as=root 运行：需要跨共享文件夹读写并保留属主/ACL。
+# ---------------------------------------------------------------------------
+INST_LOG="/var/log/packages/${SYNOPKG_PKGNAME}.log"
+
+install_log ()
+{
+    if [ $# -eq 0 ]; then          # 支持管道输入（eval ... | install_log）
+        while IFS= read -r _line; do
+            [ -n "${_line}" ] && echo "$(date +'%Y/%m/%d %H:%M:%S') ${_line}" 1>&2
+        done
+    else
+        echo "$(date +'%Y/%m/%d %H:%M:%S') $*" 1>&2
+    fi
+}
+
+log_step ()
+{
+    install_log "===> Step $1. STATUS=${SYNOPKG_PKG_STATUS} PKG=${SYNOPKG_PKGNAME}"
+}
+
+call_func ()
+{
+    FUNC=$1
+    if command -v "${FUNC}" >/dev/null 2>&1; then
+        install_log "Begin ${FUNC}"
+        eval "${FUNC}" 2>&1 | install_log
+        install_log "End ${FUNC}"
+    fi
+}
+
+[ -n "${SYNOPKG_PKGVAR}" ] || SYNOPKG_PKGVAR="${SYNOPKG_PKGDEST}/var"
+
+# 载入包内服务变量（PKG_USER / SERVICE_COMMAND 等）
+SVC_SETUP="$(dirname "$0")/service-setup"
+[ -r "${SVC_SETUP}" ] && . "${SVC_SETUP}"
+
+# spk 内 target/var 的默认文件 → 持久目录 SYNOPKG_PKGVAR
+# 已存在的不覆盖；新文件以 .new 补入（升级不冲掉用户配置）
+syno_sync_var_folder ()
+{
+    _var="${SYNOPKG_PKGDEST}/var"
+    [ -d "$_var" ] || return 0
+    [ -n "$(ls -A "$_var" 2>/dev/null)" ] || return 0
+    install_log "Sync default files from target/var to ${SYNOPKG_PKGVAR}"
+    mkdir -p "${SYNOPKG_PKGVAR}"
+    # 1) 已存在的不动，只拷缺失的
+    find "$_var" -type f | while read -r _f; do
+        _rel=${_f#${_var}/}
+        if [ ! -e "${SYNOPKG_PKGVAR}/${_rel}" ]; then
+            mkdir -p "${SYNOPKG_PKGVAR}/$(dirname "${_rel}")"
+            cp -f "$_f" "${SYNOPKG_PKGVAR}/${_rel}" && install_log "  + ${_rel}"
+        fi
+    done
+    # 2) 把包内更新过的默认项以 .new 补入（便于用户比对）
+    find "$_var" -type f | while read -r _f; do
+        _rel=${_f#${_var}/}
+        if [ -e "${SYNOPKG_PKGVAR}/${_rel}" ] && ! cmp -s "$_f" "${SYNOPKG_PKGVAR}/${_rel}"; then
+            cp -f "$_f" "${SYNOPKG_PKGVAR}/${_rel}.new" && install_log "  ~ ${_rel}.new"
+        fi
+    done
+}
+
+# 把实例 token 注入 UI（静态页由 DSM 托管，无法运行时读取 var，故安装期模板替换）
+inject_token ()
+{
+    [ -s "${SYNOPKG_PKGVAR}/token" ] || return 0
+    if [ -f "${SYNOPKG_PKGDEST}/ui/index.html" ]; then
+        _tok=$(cat "${SYNOPKG_PKGVAR}/token")
+        sed -i "s/__AFS_TOKEN__/${_tok}/g" "${SYNOPKG_PKGDEST}/ui/index.html" \
+            && install_log "token injected into ui/index.html"
+        if grep -q "__AFS_TOKEN__" "${SYNOPKG_PKGDEST}/ui/index.html"; then
+            install_log "WARN: ui/index.html 仍含未替换占位符，token 通道将不可用"
+        fi
+    fi
+}
+
+preinst ()
+{
+    log_step preinst
+    # 后端为纯标准库 Python + 系统 rsync，二者缺一不可
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "ERROR: python3 not found. AutoFileSync requires DSM 7.0+ (built-in python3)." 1>&2
+        exit 1
+    fi
+    _pyver=$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo "0")
+    install_log "python3 found: ${_pyver}"
+    case "${_pyver}" in
+        2.*|3.[0-6])
+            echo "ERROR: python3 >= 3.7 required, found ${_pyver}." 1>&2
+            exit 1 ;;
+    esac
+
+    if ! command -v rsync >/dev/null 2>&1; then
+        echo "ERROR: rsync not found. AutoFileSync relies on the rsync shipped with DSM." 1>&2
+        exit 1
+    fi
+    install_log "rsync found: $(rsync --version 2>/dev/null | head -n 1)"
+
+    call_func service_preinst
+    exit 0
+}
+
+postinst ()
+{
+    log_step postinst
+
+    call_func syno_sync_var_folder
+
+    # 运行目录：日志 / 锁 / unix socket
+    mkdir -p "${SYNOPKG_PKGVAR}/logs" "${SYNOPKG_PKGVAR}/locks" "${SYNOPKG_PKGVAR}/http"
+    chmod 0755 "${SYNOPKG_PKGVAR}" "${SYNOPKG_PKGVAR}/logs" \
+               "${SYNOPKG_PKGVAR}/locks" "${SYNOPKG_PKGVAR}/http" 2>/dev/null || true
+    install_log "runtime dirs ready under ${SYNOPKG_PKGVAR}"
+
+    # 实例 token（认证兜底通道；升级保留）——用 python3 生成，避免 busybox od 差异
+    if [ ! -s "${SYNOPKG_PKGVAR}/token" ]; then
+        python3 -c 'import secrets; print(secrets.token_hex(16))' > "${SYNOPKG_PKGVAR}/token" 2>/dev/null \
+            || head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' > "${SYNOPKG_PKGVAR}/token"
+        install_log "token generated -> ${SYNOPKG_PKGVAR}/token"
+    fi
+    chmod 0600 "${SYNOPKG_PKGVAR}/token" 2>/dev/null || true
+
+    inject_token
+
+    call_func service_postinst
+    exit 0
+}
+
+preuninst ()
+{
+    log_step preuninst
+    call_func service_preuninst
+    exit 0
+}
+
+postuninst ()
+{
+    log_step postuninst
+    # 卸载向导：默认保留；选择“删除”时清除 ${SYNOPKG_PKGVAR}
+    case "${wizard_delete_data:-}" in
+        true|TRUE|1)
+            if [ -n "${SYNOPKG_PKGVAR:-}" ] && [ -d "${SYNOPKG_PKGVAR}" ]; then
+                case "${SYNOPKG_PKGVAR}" in
+                    */autofilesync)
+                        install_log "wizard_delete_data=true -> remove ${SYNOPKG_PKGVAR}"
+                        rm -rf -- "${SYNOPKG_PKGVAR}"
+                        ;;
+                    *)
+                        install_log "Refuse to delete unexpected path: ${SYNOPKG_PKGVAR}"
+                        ;;
+                esac
+            fi
+            ;;
+        *)
+            install_log "keep package data: ${SYNOPKG_PKGVAR:-unknown}"
+            ;;
+    esac
+    call_func service_postuninst
+    exit 0
+}
+
+preupgrade ()
+{
+    log_step preupgrade
+    # 升级前留一份配置快照（schema 迁移/回滚用）
+    if [ -f "${SYNOPKG_PKGVAR}/config.json" ]; then
+        cp -f "${SYNOPKG_PKGVAR}/config.json" \
+              "${SYNOPKG_PKGVAR}/config.json.bak-${SYNOPKG_PKGVER:-unknown}" 2>/dev/null \
+            && install_log "config backup -> config.json.bak-${SYNOPKG_PKGVER:-unknown}"
+    fi
+    call_func service_preupgrade
+    exit 0
+}
+
+postupgrade ()
+{
+    log_step postupgrade
+
+    call_func syno_sync_var_folder
+    # 升级后 index.html 带回了占位符，需要重新注入
+    inject_token
+    call_func service_postupgrade
+    exit 0
+}

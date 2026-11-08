@@ -1,0 +1,13 @@
+#!/bin/sh
+# AutoFileSync 服务变量（被 installer 与 start-stop-status 共同 source）
+# conf/privilege run-as=root：启停脚本与守护进程均以 root 运行
+# （跨共享文件夹读写、保留属主/ACL 需要；API 侧另有 token 校验）
+PKG_USER="sc-autofilesync"
+
+SERVICE_COMMAND="python3 ${SYNOPKG_PKGDEST}/bin/autofilesync-daemon.py"
+
+LOG_FILE="${SYNOPKG_PKGVAR}/autofilesync.log"
+PID_FILE="${SYNOPKG_PKGVAR}/autofilesync.pid"
+
+# 守护进程自行推导：var/config.json / var/state.json / var/logs /
+# var/http/autofilesync.sock / var/token

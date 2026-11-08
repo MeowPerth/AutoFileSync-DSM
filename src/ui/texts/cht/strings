@@ -1,0 +1,6 @@
+[notify]
+title="AutoFileSync"
+success="{0} 檔案同步已完成"
+failed="{0} 檔案同步失敗，請查看歷史記錄"
+test="{0} 測試通知"
+rolled_back="{0} 刪除超限，已回滾"

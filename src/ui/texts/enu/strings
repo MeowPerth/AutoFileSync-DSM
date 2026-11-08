@@ -1,0 +1,6 @@
+[notify]
+title="AutoFileSync"
+success="{0}: sync completed."
+failed="{0}: sync failed. Open AutoFileSync > History for details."
+test="{0}: test notification."
+rolled_back="{0}: delete limit exceeded, deletions rolled back."

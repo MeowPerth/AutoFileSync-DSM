@@ -1,0 +1,29 @@
+{
+  "dsm-wrapper.js": {
+    "MeowPerth.AutoFileSync.AppInstance": {
+      "type": "app",
+      "title": "AutoFileSync",
+      "version": "1.0.0",
+      "icon": "images/icon_{0}.png",
+      "allowMultiInstance": false,
+      "allUsers": false,
+      "appWindow": "MeowPerth.AutoFileSync.AppWindow",
+      "depend": [
+        "MeowPerth.AutoFileSync.AppWindow"
+      ],
+      "texts": "texts",
+      "preloadTexts": [
+        "notify:title",
+        "notify:success",
+        "notify:failed",
+        "notify:test",
+        "notify:rolled_back"
+      ]
+    },
+    "MeowPerth.AutoFileSync.AppWindow": {
+      "type": "lib",
+      "title": "AutoFileSync",
+      "icon": "images/icon_{0}.png"
+    }
+  }
+}

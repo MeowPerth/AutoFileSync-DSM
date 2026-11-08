@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<!-- AutoFileSync — DSM 应用窗口单页（M2）
+     由 DSM nginx 托管（/webman/3rdparty/autofilesync/），API 走同目录 api.cgi（同源）。
+     安装时 installer 会把 __AFS_TOKEN__ 替换为实例 token（认证兜底通道）。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoFileSync</title>
+<style>
+:root{
+  --bg:#f2f4f7; --card:#ffffff; --text:#1b2430; --muted:#6b7686; --line:#e3e7ee;
+  --accent:#2377ef; --accent-weak:#e8f1fe; --ok:#1fa45b; --warn:#e07b00; --err:#d84343;
+  --mono:"SF Mono",Consolas,"Liberation Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#16181d; --card:#1f2229; --text:#e8eaf0; --muted:#9aa3b2; --line:#2c313b;
+  --accent:#4b8ef7; --accent-weak:#243044; --ok:#37b96f; --warn:#f09b3c; --err:#ef6b6b;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.55 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 18px 22px;
+  display:flex;flex-direction:column;height:100vh;min-height:0;overflow:hidden}
+h1{font-size:20px;margin:0;display:flex;align-items:center;gap:10px;font-weight:650}
+h1 .logo{width:28px;height:28px;border-radius:8px;object-fit:contain;flex:none}
+h1 .sub{font-size:13px;font-weight:400;color:var(--muted);margin-left:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.top-r{display:flex;align-items:center;gap:10px}
+.meta{font-size:12px;color:var(--muted)}
+.pill{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--accent-weak);color:var(--accent);
+  display:inline-flex;align-items:center;gap:6px}
+.pill.ok{background:rgba(31,164,91,.14);color:var(--ok)}
+.pill.err{background:rgba(216,67,67,.14);color:var(--err)}
+.pill.busy{background:var(--accent-weak);color:var(--accent)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.banner{display:flex;gap:10px;align-items:flex-start;background:var(--accent-weak);
+  border:1px solid rgba(35,119,239,.22);color:var(--text);border-radius:10px;padding:10px 14px;
+  margin-bottom:14px;font-size:13px}
+.banner b{color:var(--accent)}
+.banner .ico{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;
+  border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;flex:none;margin-top:1px}
+.banner.warn{background:rgba(224,123,0,.10);border-color:rgba(224,123,0,.35)}
+.banner.warn .ico{background:var(--warn)}
+.banner.hidden{display:none}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:0 0 16px;flex:none}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;
+  padding:8px 16px;margin-bottom:-1px;color:var(--muted);font-size:14px;cursor:pointer}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.panel{display:none}
+.panel.active{display:block;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:13px;margin:0;color:var(--muted);font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.grid .card{margin-bottom:14px}
+.btn{font:inherit;font-size:13px;padding:5px 12px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--text);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.06);color:#fff}
+.btn.danger{color:var(--err);border-color:rgba(216,67,67,.4)}
+.btn.danger:hover{background:rgba(216,67,67,.08);border-color:var(--err)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.ghost{padding:3px 9px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;
+  letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .name{font-weight:600;white-space:nowrap}
+.tbl .right{text-align:right}
+.tbl .ops{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}
+.path{font-family:var(--mono);font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.path i{font-style:normal;color:var(--muted);margin-right:6px;font-size:11px;font-family:-apple-system,"PingFang SC",sans-serif}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.badge{display:inline-block;font-size:11px;line-height:18px;padding:0 8px;border-radius:999px;
+  background:var(--accent-weak);color:var(--accent);white-space:nowrap}
+.badge.ok{background:rgba(31,164,91,.14);color:var(--ok)}
+.badge.err{background:rgba(216,67,67,.14);color:var(--err)}
+.badge.warn{background:rgba(224,123,0,.14);color:var(--warn)}
+.badge.info{background:var(--accent-weak);color:var(--accent)}
+.badge.off{background:rgba(107,118,134,.13);color:var(--muted)}
+.badge.run{background:var(--accent);color:#fff}
+.toggle{font:inherit;font-size:12px;padding:2px 10px;border-radius:999px;border:1px solid var(--line);
+  background:var(--bg);color:var(--muted);cursor:pointer;white-space:nowrap}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+.toggle.on{background:rgba(31,164,91,.14);border-color:rgba(31,164,91,.4);color:var(--ok)}
+.toggle.warn{background:rgba(224,123,0,.14);border-color:rgba(224,123,0,.4);color:var(--warn)}
+.toggle.ok{background:rgba(31,164,91,.14);border-color:rgba(31,164,91,.4);color:var(--ok)}
+.toggles{display:flex;gap:4px;flex-wrap:wrap}
+.empty{color:var(--muted);text-align:center;padding:26px 10px;font-size:13px}
+.kv{width:100%;border-collapse:collapse;font-size:13px}
+.kv td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.kv tr:last-child td{border-bottom:none}
+.kv td:first-child{color:var(--muted);width:34%;padding-right:12px;white-space:nowrap}
+.kv td:last-child{font-family:var(--mono);font-size:12px;word-break:break-all}
+.kv td .ok{color:var(--ok)} .kv td .no{color:var(--muted)}
+pre.log{margin:0;background:#0f1218;color:#d6deeb;border-radius:8px;padding:12px 14px;
+  font-family:var(--mono);font-size:12px;line-height:1.6;max-height:58vh;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.sub-note{font-size:12px;color:var(--muted);margin:0 0 10px;font-family:var(--mono)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.field .row{gap:8px}
+.spacer{flex:1}
+
+/* forms */
+.input{font:inherit;font-size:13px;padding:5px 8px;border-radius:7px;border:1px solid var(--line);
+  background:var(--card);color:var(--text);width:100%}
+.input:focus{outline:none;border-color:var(--accent)}
+.input.mono{font-family:var(--mono);font-size:12px}
+.input.tiny{width:84px}
+select.input{width:auto;min-width:110px}
+textarea.input{resize:vertical}
+label.block{display:block;margin:12px 0 0;font-size:12px;color:var(--muted)}
+label.block textarea{margin-top:5px;color:var(--text)}
+.form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px;margin-top:12px}
+@media (max-width:700px){.form-grid{grid-template-columns:1fr}}
+.form-grid label{font-size:12px;color:var(--muted);display:block}
+.form-grid label .input{margin-top:4px}
+.form-grid label.check{display:flex;align-items:center;gap:7px;color:var(--text);font-size:13px}
+.form-grid .row .input{flex:1}
+.sched-extra{margin-top:4px}
+.sched-extra .row{margin-bottom:8px}
+.wd{display:flex;gap:6px;flex-wrap:wrap}
+.wd label{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text);
+  border:1px solid var(--line);border-radius:6px;padding:2px 7px;cursor:pointer}
+.adv{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.adv summary{cursor:pointer;color:var(--muted);font-size:12px}
+.err{color:var(--err);font-size:12px;margin-top:10px;white-space:pre-wrap}
+.form-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(10,14,20,.45);z-index:50;display:flex;
+  align-items:center;justify-content:center;padding:20px}
+.overlay[hidden]{display:none}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  width:min(780px,94vw);max-height:90vh;display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.modal.small{width:min(560px,94vw)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--line)}
+.modal-head h3{margin:0;font-size:16px}
+.modal-body{padding:16px 18px;overflow-y:auto}
+.modal-foot{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+.x{background:none;border:none;font-size:20px;line-height:1;color:var(--muted);cursor:pointer}
+.dirlist{border:1px solid var(--line);border-radius:8px;margin-top:10px;max-height:46vh;overflow:auto}
+.dirlist button{display:block;width:100%;text-align:left;background:none;border:none;
+  border-bottom:1px solid var(--line);padding:8px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer}
+.dirlist button:last-child{border-bottom:none}
+.dirlist button:hover{background:var(--accent-weak);color:var(--accent)}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:rgba(20,26,36,.92);
+  color:#fff;font-size:13px;padding:8px 16px;border-radius:8px;z-index:80;opacity:0;
+  transition:opacity .2s;pointer-events:none;max-width:80vw}
+#toast.show{opacity:1}
+
+/* ---- list polish ---- */
+.tbl th{padding:10px 12px;letter-spacing:.2px;font-size:11.5px}
+.tbl td{padding:12px;vertical-align:middle}
+.tbl tbody tr{transition:background .12s ease}
+.tbl tbody tr:hover{background:var(--bg)}
+.tbl .name{font-size:14px;font-weight:600}
+.tbl .name + .muted{font-size:11.5px;margin-top:1px}
+.path{line-height:1.5}
+.path i{display:inline-block;width:16px}
+.ops{gap:6px}
+.btn.run{background:var(--accent-weak);border-color:transparent;color:var(--accent);font-weight:600}
+.btn.run:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 10px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;transition:.15s}
+.toggle::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55}
+.toggle:hover{border-color:var(--muted);color:var(--text)}
+.toggle.on{background:rgba(31,164,91,.12);border-color:rgba(31,164,91,.35);color:var(--ok)}
+.toggle.warn{background:rgba(224,123,0,.10);border-color:rgba(224,123,0,.35);color:var(--warn)}
+.toggle.ok{background:rgba(31,164,91,.12);border-color:rgba(31,164,91,.35);color:var(--ok)}
+.toggles{gap:6px}
+
+/* ---- v3 polish ---- */
+.card{box-shadow:0 1px 2px rgba(16,24,40,.04),0 3px 10px rgba(16,24,40,.04)}
+.modal{width:min(820px,94vw)}
+.modal-body{padding:18px 20px}
+.modal-foot{padding:14px 20px}
+.section-title{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--muted);margin:14px 0 6px}
+.section-title:first-child{margin-top:0}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);margin-bottom:8px}
+.field>.input,.field>.input-group{width:100%}
+.flabel{font-size:12px;color:var(--muted)}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.45}
+.form-grid{gap:0 16px;margin-top:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.form-grid + .form-grid{margin-top:10px}
+.field + .form-grid{margin-top:10px}
+.form-grid.checks{margin-top:10px}
+.form-grid.checks{gap:8px 16px;margin-top:2px}
+.check{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text);line-height:1.45}
+.check input{margin:2px 0 0;flex:none}
+.input-group{display:flex;gap:6px}
+.input-group .input{flex:1;min-width:0}
+.input-group .btn{height:34px}
+.field .input.tiny,.row .input.tiny{width:88px;flex:none}
+.input{height:34px;padding:0 10px}
+select.input{height:34px;width:100%}
+textarea.input{height:auto;padding:8px 10px}
+.btn{height:32px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center}
+.btn.sm,.btn.ghost{height:28px;padding:0 10px}
+.tbl{table-layout:fixed}
+.tbl th,.tbl td{vertical-align:middle}
+.kv{table-layout:fixed}
+.kv td:first-child{width:130px}
+.kv td{vertical-align:middle;padding:8px 0}
+.sched-row{margin:-4px 0 12px}
+.stack{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.col .card{margin-bottom:0}
+
+.settings-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 26px}
+.settings-body>div{min-width:0}
+.settings-body>div:first-child{display:flex;flex-direction:column}
+.settings-body>div:first-child .form-grid.checks{margin-top:auto;padding-top:10px}
+@media (max-width:900px){.settings-body{grid-template-columns:1fr}}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 14px}
+.stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.stat .k{font-size:11px;color:var(--muted);letter-spacing:.3px}
+.stat .v{font-size:13px;font-family:var(--mono);margin-top:2px;word-break:break-all}
+.stat .v.ok{color:var(--ok)}
+@media (max-width:760px){.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1><img class="logo" src="images/icon_64.png" alt="">AutoFileSync</h1>
+    <div class="top-r">
+      <span class="meta" id="uptime"></span>
+      <span class="pill" id="pill"><span class="dot"></span>连接中…</span>
+      <button class="btn" id="refresh">刷新</button>
+    </div>
+  </div>
+
+  <div class="banner hidden" id="banner"></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="jobs">任务</button>
+    <button class="tab" data-tab="history">历史</button>
+    <button class="tab" data-tab="logs">日志</button>
+    <button class="tab" data-tab="settings">设置</button>
+  </div>
+
+  <div class="panel active" id="panel-jobs">
+    <div class="card">
+      <div class="card-head">
+        <h2>同步任务 <span class="hint muted small" id="jobsHint"></span></h2>
+        <div class="card-actions"><button class="btn primary" id="newJob">＋ 新建任务</button></div>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width:190px">名称</th>
+            <th>源 → 目标</th>
+            <th style="width:160px">上次运行</th>
+            <th style="width:175px">状态/模式</th>
+            <th style="width:200px" class="right">操作</th>
+          </tr>
+        </thead>
+        <tbody id="jobsBody"></tbody>
+      </table>
+      <div class="empty" id="jobsEmpty" hidden>还没有任务，点右上角「新建任务」。</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-history">
+    <div class="card">
+      <div class="card-head">
+        <h2>运行历史</h2>
+        <div class="card-actions"><button class="btn ghost" id="historyRefresh">刷新</button></div>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width:150px">时间</th>
+            <th style="width:140px">任务</th>
+            <th style="width:90px">结果</th>
+            <th style="width:90px">耗时</th>
+            <th style="width:100px">传输/删除</th>
+            <th style="width:80px">模式</th>
+            <th class="right">日志</th>
+          </tr>
+        </thead>
+        <tbody id="runsBody"></tbody>
+      </table>
+      <div class="empty" id="runsEmpty" hidden>还没有运行记录。</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-logs">
+    <div class="card">
+      <div class="card-head">
+        <h2>日志</h2>
+        <div class="card-actions">
+          <select id="logJob" class="input"></select>
+          <select id="logRun" class="input"></select>
+          <button class="btn ghost" id="logRefresh">刷新</button>
+        </div>
+      </div>
+      <p class="sub-note" id="logPath"></p>
+      <pre class="log" id="logBox">加载中…</pre>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-settings">
+    <div class="card">
+      <div class="card-head">
+        <h2>同步设置</h2>
+        <div class="card-actions">
+          <button class="btn" id="notifyTest">测试通知</button>
+          <button class="btn primary" id="saveSettings">保存设置</button>
+        </div>
+      </div>
+      <div class="settings-body">
+        <div>
+          <label class="field">并发任务数
+            <select id="sConcurrency" class="input">
+              <option>1</option><option>2</option><option>3</option>
+            </select></label>
+          <label class="field">通知策略
+            <select id="sNotify" class="input">
+              <option value="never">不通知</option>
+              <option value="failure">仅失败</option>
+              <option value="always">每次</option>
+            </select></label>
+          <label class="field">通知对象
+            <input id="sNotifyUsers" class="input" placeholder="@administrators">
+            <div class="hint">DSM 用户或组（组用 @ 前缀），多个用逗号分隔</div></label>
+          <div class="form-grid checks">
+            <label class="check"><input type="checkbox" id="sFirstPreview"><span>新建任务默认预览模式</span></label>
+            <label class="check"><input type="checkbox" id="sMissed"><span>启动后补跑到期任务</span></label>
+          </div>
+        </div>
+        <div>
+          <label class="field">默认排除（每行一条）
+            <textarea id="sExcludes" class="input mono" rows="8"></textarea></label>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>运行环境</h2>
+      <div class="stats" id="envStats"></div>
+    </div>
+  </div>
+
+<!-- 任务编辑 -->
+<div class="overlay" id="jobOverlay" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3 id="jobTitle">新建任务</h3><button class="x" id="jobClose">×</button></div>
+    <div class="modal-body">
+      <div class="section-title">基本</div>
+      <label class="field">名称
+        <input id="jName" class="input" placeholder="例如 Jellyfin"></label>
+      <div class="form-grid">
+        <label class="field">源目录
+          <div class="input-group">
+            <input id="jSource" class="input mono" placeholder="/volume3/...">
+            <button class="btn" data-browse="src">浏览</button>
+          </div></label>
+        <label class="field">目标目录
+          <div class="input-group">
+            <input id="jDest" class="input mono" placeholder="/volume2/...">
+            <button class="btn" data-browse="dst">浏览</button>
+          </div></label>
+      </div>
+
+      <div class="section-title">自动执行</div>
+      <div class="form-grid">
+        <label class="field">执行方式
+          <select id="jSchedMode" class="input">
+            <option value="interval">每隔 N 分钟</option>
+            <option value="daily">每天 / 每周</option>
+          </select></label>
+        <div class="field"><span class="flabel">状态</span>
+          <label class="check"><input type="checkbox" id="jEnabled"><span>启用自动执行</span></label>
+        </div>
+      </div>
+      <div id="intervalRow" class="row sched-row" hidden>
+        <span class="hint">每</span>
+        <input id="jInterval" type="number" min="1" max="10080" class="input tiny" value="60">
+        <span class="hint">分钟</span>
+      </div>
+      <div id="dailyRow" class="sched-row" hidden>
+        <div class="row"><span class="hint">时间</span>
+          <input id="jTime" type="time" class="input" value="03:30"></div>
+        <div class="wd" id="weekdays">
+          <label><input type="checkbox" class="wd" value="1" checked>一</label>
+          <label><input type="checkbox" class="wd" value="2" checked>二</label>
+          <label><input type="checkbox" class="wd" value="3" checked>三</label>
+          <label><input type="checkbox" class="wd" value="4" checked>四</label>
+          <label><input type="checkbox" class="wd" value="5" checked>五</label>
+          <label><input type="checkbox" class="wd" value="6" checked>六</label>
+          <label><input type="checkbox" class="wd" value="7" checked>日</label>
+        </div>
+      </div>
+      <div class="hint" id="schedHint" style="margin-top:6px"></div>
+
+      <div class="section-title">同步选项</div>
+      <div class="form-grid checks">
+        <label class="check"><input type="checkbox" id="jDry" checked><span>预览模式（dry-run，不落盘）</span></label>
+        <label class="check"><input type="checkbox" id="jDelete" checked><span>删除目标端多余文件</span></label>
+        <label class="check"><input type="checkbox" id="jChecksum"><span>按内容校验（慢）</span></label>
+        <label class="check"><input type="checkbox" id="jKeepNewer"><span>保留目标端较新文件</span></label>
+      </div>
+      <div class="hint" style="margin-top:6px">当前为预览模式时，「运行」与定时任务都只做 dry-run。</div>
+
+      <div class="section-title">排除规则</div>
+      <label class="field">每行一条
+        <textarea id="jExclude" class="input mono" rows="4" placeholder="@eaDir/&#10;#recycle/&#10;*.sock"></textarea></label>
+
+      <details class="adv">
+        <summary>高级选项</summary>
+        <div class="form-grid">
+          <label class="field">删除上限（条，0=不限）<input id="jMaxDelete" type="number" min="0" class="input" value="500"></label>
+          <label class="field">带宽限制（KB/s，0=不限）<input id="jBwlimit" type="number" min="0" class="input" value="0"></label>
+          <label class="field">超时（小时）<input id="jTimeout" type="number" min="1" max="168" class="input" value="6"></label>
+          <label class="check"><input type="checkbox" id="jDeleteExcluded"><span>删除被排除的文件</span></label>
+          <label class="check"><input type="checkbox" id="jRollback" checked><span>删除超限自动回滚（仅本次删除）</span></label>
+          <label class="check"><input type="checkbox" id="jAcls" checked><span>保留 ACL</span></label>
+          <label class="check"><input type="checkbox" id="jXattrs" checked><span>保留扩展属性</span></label>
+        </div>
+      </details>
+      <div class="err" id="jobErr"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger" id="jobAdopt" hidden>确认接管目标目录</button>
+      <span class="spacer"></span>
+      <button class="btn" id="jobCancel">取消</button>
+      <button class="btn primary" id="jobSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 目录浏览 -->
+<div class="overlay" id="browseOverlay" hidden>
+  <div class="modal small">
+    <div class="modal-head"><h3>选择目录</h3><button class="x" id="browseClose">×</button></div>
+    <div class="modal-body">
+      <div class="row"><button class="btn ghost" id="browseUp">↑ 上级</button><span class="mono small" id="browsePath">/</span></div>
+      <div class="dirlist" id="browseList"></div>
+    </div>
+    <div class="modal-foot"><span class="spacer"></span>
+      <button class="btn" id="browseCancel">取消</button>
+      <button class="btn primary" id="browsePick">选择此目录</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+const TOKEN = "__AFS_TOKEN__";
+const API = "./api.cgi";
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
+
+const S = {
+  status: null, config: null, about: null, runs: [],
+  editing: null, browseTarget: null, browsePath: "/",
+  logJob: "", logFile: "", timer: null,
+};
+
+/* ---------------- 基础 ---------------- */
+function esc(v) {
+  return String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+function badge(text, cls) { return '<span class="badge ' + (cls || "") + '">' + esc(text) + "</span>"; }
+function fmtTime(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  const p = (n) => (n < 10 ? "0" + n : "" + n);
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+    " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
+function fmtDur(sec) {
+  sec = Math.max(0, sec | 0);
+  if (sec >= 3600) return Math.floor(sec / 3600) + "h" + Math.floor(sec % 3600 / 60) + "m";
+  if (sec >= 60) return Math.floor(sec / 60) + "m" + (sec % 60) + "s";
+  return sec + "s";
+}
+function fmtSize(n) {
+  if (!n && n !== 0) return "—";
+  const u = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0, v = n;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  return (i === 0 ? v : v.toFixed(1)) + " " + u[i];
+}
+const STATUS_MAP = {
+  ok: ["成功", "ok"], ok_partial: ["部分", "warn"], failed: ["失败", "err"],
+  blocked: ["拦截", "err"], aborted: ["超限", "err"],
+  aborted_rolled_back: ["已回滚", "info"], canceled: ["取消", "off"],
+  timeout: ["超时", "err"],
+};
+function statusBadge(st) {
+  const item = STATUS_MAP[st] || [st || "—", "off"];
+  return badge(item[0], item[1]);
+}
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+function hdr() {
+  const h = {};
+  if (TOKEN && TOKEN.indexOf("__") !== 0) h["X-AFS-Token"] = TOKEN;
+  return h;
+}
+function apiErr(data) {
+  const e = new Error(data.error || "请求失败");
+  e.errors = data.errors || [];
+  e.code = data.code || "";
+  return e;
+}
+async function apiGet(action, params) {
+  const q = new URLSearchParams(Object.assign({ action: action }, params || {}));
+  const resp = await fetch(API + "?" + q.toString(), {
+    headers: hdr(), credentials: "same-origin", cache: "no-store",
+  });
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { throw new Error("API 返回非 JSON（HTTP " + resp.status + "）：" + text.slice(0, 160)); }
+  if (data && data.ok === false) throw apiErr(data);
+  return data;
+}
+async function apiPost(action, payload) {
+  const resp = await fetch(API, {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, hdr()),
+    credentials: "same-origin",
+    cache: "no-store",
+    body: JSON.stringify({ action: action, payload: payload || {} }),
+  });
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { throw new Error("API 返回非 JSON（HTTP " + resp.status + "）：" + text.slice(0, 160)); }
+  if (data && data.ok === false) throw apiErr(data);
+  return data;
+}
+
+/* ---------------- 渲染：任务 ---------------- */
+function jobIndex() {
+  const out = {};
+  ((S.status && S.status.jobs) || []).forEach((j) => { out[j.id] = j; });
+  return out;
+}
+function renderJobs() {
+  const jobs = (S.config && S.config.config && S.config.config.jobs) || [];
+  const idx = jobIndex();
+  const runJobs = (S.status && S.status.runner && S.status.runner.running_jobs) || [];
+  const runMap = {};
+  runJobs.forEach((x) => { runMap[x.id] = x; });
+  $("#jobsEmpty").hidden = jobs.length > 0;
+  $("#jobsHint").textContent = jobs.length + " 个任务";
+  $("#jobsBody").innerHTML = jobs.map((job) => {
+    const st = idx[job.id] || {};
+    const cur = runMap[job.id] || null;
+    const running = !!st.running;
+    const queued = !!st.queued;
+    const sub = '<div class="muted small">' + esc(st.schedule_text || "每天 03:30")
+      + (st.next_run_text ? " · 下次 " + esc(st.next_run_text) : "") + "</div>";
+    const adopt = st.needs_adopt ? ' <span class="badge warn">待接管</span>' : "";
+
+    let last;
+    if (running) {
+      last = '<span class="badge run"><span class="dot"></span>运行中</span>'
+        + '<div class="muted small">' + ((cur && cur.files) || 0) + " 项 · "
+        + fmtDur((cur && cur.elapsed) || 0) + "</div>";
+    } else if (queued) {
+      last = badge("排队中", "warn");
+    } else if (st.last_run) {
+      last = '<div class="stack"><span class="small">' + esc(fmtTime(st.last_run.start))
+        + "</span><span>" + statusBadge(st.last_run.status) + "</span></div>";
+    } else {
+      last = '<span class="muted">—</span>';
+    }
+
+    let ops = "";
+    if (running || queued) {
+      ops += '<button class="btn sm danger" data-act="cancel" data-id="' + esc(job.id) + '">取消</button>';
+    } else {
+      ops += '<button class="btn sm run" data-act="run" data-id="' + esc(job.id)
+        + '" title="按当前模式运行（' + (job.dry_run ? "预览" : "实跑") + '）">运行</button>';
+    }
+    ops += '<button class="btn sm" data-act="edit" data-id="' + esc(job.id) + '">编辑</button>';
+    ops += '<button class="btn sm danger" data-act="del" data-id="' + esc(job.id) + '">删除</button>';
+
+    const toggles = '<div class="toggles">'
+      + '<button class="toggle ' + (job.enabled ? "on" : "") + '" data-act="toggle" data-id="'
+      + esc(job.id) + '">' + (job.enabled ? "已启用" : "已停用") + "</button>"
+      + '<button class="toggle ' + (job.dry_run ? "warn" : "ok") + '" data-act="mode" data-id="'
+      + esc(job.id) + '" title="点击切换预览/实跑">'
+      + (job.dry_run ? "预览" : "实跑") + "</button></div>";
+
+    return "<tr>"
+      + '<td><div class="name">' + esc(job.name || job.id) + "</div>" + sub + adopt + "</td>"
+      + '<td><div class="path" title="' + esc(job.source) + '"><i>源</i>' + esc(job.source) + "</div>"
+      + '<div class="path" title="' + esc(job.dest) + '"><i>标</i>' + esc(job.dest) + "</div></td>"
+      + "<td>" + last + "</td>"
+      + "<td>" + toggles + "</td>"
+      + '<td><div class="ops">' + ops + "</div></td>"
+      + "</tr>";
+  }).join("");
+}
+
+/* ---------------- 渲染：设置/环境/关于 ---------------- */
+function renderEnv() {
+  const d = (S.status && S.status.daemon) || {};
+  const rs = (S.status && S.status.rsync) || {};
+  const pv = (S.status && S.status.privilege) || {};
+  const pkg = (S.status && S.status.pkg) || {};
+  const caps = rs.capabilities || {};
+  const yes = (v) => (v ? "✓" : "—");
+  const items = [
+    ["套件版本", (pkg.name || "autofilesync") + " " + (pkg.version || "—")],
+    ["rsync", (function () {
+      const base = rs.path ? rs.path.split("/").pop() : "";
+      return (rs.version || "未找到") + (base && base !== "rsync" ? " · " + base : "");
+    })()],
+    ["特权模式", pv.mode === "root" ? "root（spm-exec）" : "包用户", pv.mode === "root"],
+    ["运行时长", fmtDur(d.uptime_sec || 0)],
+    ["ACL / xattr", yes(caps.ACLs) + " / " + yes(caps.xattrs)],
+    ["硬链接", yes(caps.hardlinks)],
+  ];
+  $("#envStats").innerHTML = items.map((it) =>
+    '<div class="stat"><div class="k">' + esc(it[0]) + '</div><div class="v'
+    + (it[2] ? " ok" : "") + '">' + esc(it[1]) + "</div></div>").join("");
+}
+
+function fillSettings() {
+  const s = (S.config && S.config.config && S.config.config.settings) || {};
+  $("#sConcurrency").value = String(s.concurrency || 1);
+  $("#sNotify").value = s.notify_on || "failure";
+  $("#sNotifyUsers").value = (s.notify_users || ["@administrators"]).join(", ");
+  $("#sExcludes").value = (s.default_excludes || []).join("\n");
+  $("#sFirstPreview").checked = !!s.first_run_preview;
+  $("#sMissed").checked = !!s.run_missed_on_start;
+}
+
+/* ---------------- 渲染：历史 ---------------- */
+function renderRuns() {
+  const runs = S.runs || [];
+  $("#runsEmpty").hidden = runs.length > 0;
+  $("#runsBody").innerHTML = runs.map((r) => {
+    const file = String(r.log || "").split("/").pop();
+    return "<tr>"
+      + "<td>" + esc(fmtTime(r.start)) + "</td>"
+      + '<td class="name">' + esc(r.name || r.id) + "</td>"
+      + "<td>" + statusBadge(r.status) + "</td>"
+      + "<td>" + esc(fmtDur(r.duration || 0)) + "</td>"
+      + "<td>" + esc(r.transferred == null ? "—" : r.transferred) + " / " + esc(r.deleted == null ? "—" : r.deleted) + "</td>"
+      + "<td>" + badge(r.dry_run ? "预览" : "实跑", r.dry_run ? "warn" : "info") + "</td>"
+      + '<td class="right"><button class="btn sm ghost" data-act="log" data-job="' + esc(r.id)
+      + '" data-file="' + esc(file) + '">查看</button></td>'
+      + "</tr>";
+  }).join("");
+}
+async function loadRuns() {
+  try {
+    const data = await apiGet("runs", { limit: 100 });
+    S.runs = data.runs || [];
+    renderRuns();
+  } catch (e) { toast("历史加载失败：" + e.message); }
+}
+
+/* ---------------- 渲染：日志 ---------------- */
+function fillLogJobSelect() {
+  const jobs = (S.config && S.config.config && S.config.config.jobs) || [];
+  const sel = $("#logJob");
+  const cur = S.logJob;
+  sel.innerHTML = '<option value="">服务日志</option>' + jobs.map((j) =>
+    '<option value="' + esc(j.id) + '">' + esc(j.name || j.id) + "</option>").join("");
+  sel.value = cur || "";
+}
+function fillLogRunSelect() {
+  const jid = $("#logJob").value;
+  const sel = $("#logRun");
+  if (!jid) { sel.innerHTML = ""; sel.disabled = true; return; }
+  sel.disabled = false;
+  const runs = (S.runs || []).filter((r) => r.id === jid);
+  const seen = {};
+  const opts = [];
+  runs.forEach((r) => {
+    const f = String(r.log || "").split("/").pop();
+    if (!f || seen[f]) return;
+    seen[f] = 1;
+    opts.push('<option value="' + esc(f) + '">' + esc(fmtTime(r.start)) + " · " + esc((STATUS_MAP[r.status] || [r.status])[0]) + "</option>");
+  });
+  sel.innerHTML = opts.join("");
+  if (S.logFile && seen[S.logFile]) sel.value = S.logFile;
+  else if (opts.length) sel.selectedIndex = 0;
+}
+async function loadLogs() {
+  const jid = $("#logJob").value;
+  const box = $("#logBox");
+  box.textContent = "加载中…";
+  try {
+    let data;
+    if (!jid) {
+      data = await apiGet("logs", { kind: "pkg", n: 400 });
+    } else {
+      const file = $("#logRun").value;
+      if (!file) {
+        $("#logPath").textContent = "";
+        box.textContent = "该任务还没有运行日志。";
+        return;
+      }
+      data = await apiGet("logs", { kind: "run", job: jid, file: file, n: 600 });
+    }
+    $("#logPath").textContent = data.path || "";
+    const lines = data.lines || [];
+    box.textContent = lines.length ? lines.join("\n") : "(日志为空)";
+    box.scrollTop = box.scrollHeight;
+    S.logJob = jid;
+    S.logFile = jid ? $("#logRun").value : "";
+  } catch (e) {
+    box.textContent = "加载失败：" + e.message;
+  }
+}
+
+/* ---------------- 任务编辑 ---------------- */
+function updateSchedRows() {
+  const m = $("#jSchedMode").value;
+  $("#intervalRow").hidden = m !== "interval";
+  $("#dailyRow").hidden = m !== "daily";
+  const hint = $("#schedHint");
+  if (hint) {
+    const enabled = $("#jEnabled").checked;
+    hint.textContent = enabled
+      ? "将按设定自动执行。"
+      : "未启用自动执行 —— 保存后不会自动运行（仍可手动点「运行」）。";
+  }
+}
+function openJob(job) {
+  S.editing = job || null;
+  const wd = [1, 2, 3, 4, 5, 6, 7].map((d) => d);
+  $("#jobTitle").textContent = job ? "编辑任务" : "新建任务";
+  $("#jobErr").textContent = "";
+  $("#jobAdopt").hidden = true;
+
+  const settings = (S.config && S.config.config && S.config.config.settings) || {};
+  const j = job || {
+    name: "", source: "", dest: "", enabled: false,
+    dry_run: settings.first_run_preview !== false, delete: true,
+    checksum: false, keep_newer: false, delete_excluded: false, rollback: true,
+    preserve_acls: true, preserve_xattrs: true, exclude: [], max_delete: 500,
+    bwlimit_kb: 0, timeout_hours: 6,
+    schedule: { mode: "daily", time: "03:30", weekdays: [1, 2, 3, 4, 5, 6, 7] },
+  };
+  $("#jName").value = j.name || "";
+  $("#jSource").value = j.source || "";
+  $("#jDest").value = j.dest || "";
+  $("#jEnabled").checked = !!j.enabled;
+  $("#jDry").checked = j.dry_run !== false;
+  $("#jDelete").checked = j.delete !== false;
+  $("#jChecksum").checked = !!j.checksum;
+  $("#jKeepNewer").checked = !!j.keep_newer;
+  $("#jDeleteExcluded").checked = !!j.delete_excluded;
+  $("#jAcls").checked = j.preserve_acls !== false;
+  $("#jXattrs").checked = j.preserve_xattrs !== false;
+  $("#jExclude").value = (j.exclude || []).join("\n");
+  $("#jMaxDelete").value = j.max_delete == null ? 500 : j.max_delete;
+  $("#jRollback").checked = j.rollback !== false;
+  $("#jBwlimit").value = j.bwlimit_kb == null ? 0 : j.bwlimit_kb;
+  $("#jTimeout").value = j.timeout_hours == null ? 6 : j.timeout_hours;
+
+  const sch = j.schedule || { mode: "manual" };
+  $("#jSchedMode").value = (sch.mode && sch.mode !== "manual") ? sch.mode : "daily";
+  $("#jInterval").value = sch.minutes || 60;
+  $("#jTime").value = sch.time || "03:30";
+  const days = sch.weekdays || wd;
+  $$("#weekdays .wd").forEach((cb) => { cb.checked = days.indexOf(+cb.value) >= 0; });
+
+  updateSchedRows();
+  $("#jobOverlay").hidden = false;
+  setTimeout(() => { $("#jName").focus(); }, 30);
+}
+function closeJob() { $("#jobOverlay").hidden = true; S.editing = null; }
+
+function collectJob() {
+  const mode = $("#jSchedMode").value;
+  const sch = { mode: mode };
+  if (mode === "interval") sch.minutes = parseInt($("#jInterval").value, 10) || 60;
+  if (mode === "daily") {
+    sch.time = $("#jTime").value || "03:30";
+    sch.weekdays = $$("#weekdays .wd").filter((cb) => cb.checked).map((cb) => parseInt(cb.value, 10));
+  }
+  return {
+    id: S.editing ? S.editing.id : undefined,
+    name: $("#jName").value.trim(),
+    source: $("#jSource").value.trim(),
+    dest: $("#jDest").value.trim(),
+    enabled: $("#jEnabled").checked,
+    dry_run: $("#jDry").checked,
+    delete: $("#jDelete").checked,
+    checksum: $("#jChecksum").checked,
+    keep_newer: $("#jKeepNewer").checked,
+    delete_excluded: $("#jDeleteExcluded").checked,
+    preserve_acls: $("#jAcls").checked,
+    preserve_xattrs: $("#jXattrs").checked,
+    exclude: $("#jExclude").value.split("\n").map((s) => s.trim()).filter(Boolean),
+    max_delete: parseInt($("#jMaxDelete").value, 10) || 0,
+    rollback: $("#jRollback").checked,
+    bwlimit_kb: parseInt($("#jBwlimit").value, 10) || 0,
+    timeout_hours: parseFloat($("#jTimeout").value) || 6,
+    schedule: sch,
+  };
+}
+function showJobErr(e) {
+  const lines = [e.message].concat(e.errors || []);
+  $("#jobErr").textContent = lines.join("\n");
+}
+async function saveJob() {
+  try {
+    const res = await apiPost("job_save", collectJob());
+    S.editing = res.job;
+    closeJob();
+    await refresh(true);
+    toast("已保存");
+  } catch (e) {
+    showJobErr(e);
+    if (e.code === "need_adopt") $("#jobAdopt").hidden = false;
+  }
+}
+async function adoptDest() {
+  try {
+    await apiPost("adopt", {
+      id: S.editing ? S.editing.id : undefined,
+      source: $("#jSource").value.trim(),
+      dest: $("#jDest").value.trim(),
+    });
+    $("#jobAdopt").hidden = true;
+    await saveJob();
+  } catch (e) { showJobErr(e); }
+}
+
+/* ---------------- 目录浏览 ---------------- */
+async function openBrowse(target) {
+  S.browseTarget = target;
+  const cur = target === "src" ? $("#jSource").value.trim() : $("#jDest").value.trim();
+  const start = /^\/volume\d+/.test(cur) ? cur : "/";
+  try {
+    await loadBrowse(start);
+    $("#browseOverlay").hidden = false;
+  } catch (e) { toast("无法浏览：" + e.message); }
+}
+async function loadBrowse(path) {
+  const data = await apiGet("browse", { path: path });
+  S.browsePath = data.path;
+  $("#browsePath").textContent = data.path;
+  $("#browseUp").disabled = !data.parent;
+  $("#browsePick").disabled = data.path === "/";
+  const list = $("#browseList");
+  const dirs = data.dirs || [];
+  if (!dirs.length) {
+    list.innerHTML = '<div class="empty">没有子目录</div>';
+    return;
+  }
+  list.innerHTML = dirs.map((d) =>
+    '<button data-path="' + esc(d.path) + '">📁 ' + esc(d.name) + "</button>").join("");
+}
+function pickBrowse() {
+  if (S.browsePath === "/") return;
+  if (S.browseTarget === "src") $("#jSource").value = S.browsePath;
+  else $("#jDest").value = S.browsePath;
+  $("#browseOverlay").hidden = true;
+}
+
+/* ---------------- 设置 ---------------- */
+async function saveSettings() {
+  const payload = {
+    concurrency: parseInt($("#sConcurrency").value, 10) || 1,
+    log_retention_days: 30,
+    notify_on: $("#sNotify").value,
+    notify_users: $("#sNotifyUsers").value.split(",").map((s) => s.trim()).filter(Boolean),
+    default_excludes: $("#sExcludes").value.split("\n").map((s) => s.trim()).filter(Boolean),
+    first_run_preview: $("#sFirstPreview").checked,
+    run_missed_on_start: $("#sMissed").checked,
+  };
+  try {
+    await apiPost("settings", payload);
+    await refresh(true);
+    toast("设置已保存");
+  } catch (e) { toast("保存失败：" + e.message); }
+}
+
+/* ---------------- 主流程 ---------------- */
+async function refresh(full) {
+  try {
+    S.status = await apiGet("status");
+    if (full || !S.config) {
+      const cfg = await apiGet("config");
+      S.config = cfg;
+      fillSettings();
+      fillLogJobSelect();
+    }
+    const r = S.status.runner || {};
+    const runJobs = r.running_jobs || [];
+    if (runJobs.length) {
+      setPill("busy", runJobs.length > 1
+        ? "同步中 · " + runJobs.length + " 个任务"
+        : "同步中 · " + (runJobs[0].name || ""));
+      $("#uptime").textContent = runJobs.length > 1
+        ? runJobs.length + " 个任务并行"
+        : (runJobs[0].files || 0) + " 项 · " + fmtDur(runJobs[0].elapsed || 0);
+    } else {
+      setPill("ok", "就绪");
+      $("#uptime").textContent = "守护进程 " + fmtDur((S.status.daemon || {}).uptime_sec || 0);
+    }
+    const rs = S.status.rsync || {};
+    const pv = S.status.privilege || {};
+    if (!rs.ok) {
+      showBanner("<b>未检测到可用的 rsync</b>：" + esc(rs.error || "未知原因") + "。同步无法执行。", true);
+    } else if (!(rs.capabilities && rs.capabilities.ACLs)) {
+      showBanner("当前 rsync 未编入 ACL 支持，将自动降级为 <code>--no-acls</code>。", true);
+    } else if (!pv.authorized) {
+      const tip = pv.available
+        ? "<b>未授权 root（可选）</b>：同步仍可使用，但会以 <code>sc-autofilesync</code> 运行，"
+          + "无法保留 uid/gid/ACL，且可能无法读取或删除不属于该用户的文件。"
+          + "请在「权限管理器」（SimplePermissionManager）中授权 AutoFileSync。"
+        : "<b>未检测到权限管理器</b>：同步会以 <code>sc-autofilesync</code> 运行，"
+          + "无法保留 uid/gid/ACL，且可能无法读取或删除不属于该用户的文件。"
+          + "请先安装 SimplePermissionManager，再授权 AutoFileSync。";
+      showBanner(tip, true);
+    } else {
+      hideBanner();
+    }
+    renderJobs();
+    renderEnv();
+  } catch (e) {
+    setPill("err", "未连接");
+    showBanner("<b>无法连接守护进程</b>：" + esc(e.message)
+      + "<br>请确认套件已启动（套件中心 → AutoFileSync → 运行）。", true);
+  }
+}
+function setPill(kind, text) {
+  const el = $("#pill");
+  el.className = "pill " + (kind || "");
+  el.innerHTML = '<span class="dot"></span>' + esc(text);
+}
+function showBanner(html, warn) {
+  const el = $("#banner");
+  if (!html) { hideBanner(); return; }
+  el.classList.remove("hidden");
+  el.classList.toggle("warn", !!warn);
+  el.innerHTML = '<span class="ico">' + (warn ? "!" : "i") + "</span><div>" + html + "</div>";
+}
+function hideBanner() {
+  const el = $("#banner");
+  el.classList.add("hidden");
+  el.innerHTML = "";
+}
+
+function activateTab(name) {
+  $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+  $$(".panel").forEach((p) => p.classList.toggle("active", p.id === "panel-" + name));
+  if (name === "history") loadRuns();
+  if (name === "logs") { fillLogJobSelect(); fillLogRunSelect(); loadLogs(); }
+  if (history.replaceState) history.replaceState(null, "", "#" + name);
+}
+
+/* ---------------- 事件 ---------------- */
+$$(".tab").forEach((t) => t.addEventListener("click", () => activateTab(t.dataset.tab)));
+$("#refresh").addEventListener("click", () => refresh(true));
+$("#newJob").addEventListener("click", () => openJob(null));
+$("#jobClose").addEventListener("click", closeJob);
+$("#jobCancel").addEventListener("click", closeJob);
+$("#jobSave").addEventListener("click", saveJob);
+$("#jobAdopt").addEventListener("click", adoptDest);
+$("#jSchedMode").addEventListener("change", updateSchedRows);
+$("#jEnabled").addEventListener("change", updateSchedRows);
+$("#saveSettings").addEventListener("click", saveSettings);
+$("#notifyTest").addEventListener("click", async () => {
+  try { await apiPost("notify_test", {}); toast("测试通知已发送"); }
+  catch (e) { toast("发送失败：" + e.message); }
+});
+$("#historyRefresh").addEventListener("click", loadRuns);
+$("#logRefresh").addEventListener("click", loadLogs);
+$("#logJob").addEventListener("change", () => {
+  S.logFile = "";
+  fillLogRunSelect();
+  loadLogs();
+});
+$("#logRun").addEventListener("change", () => { S.logFile = $("#logRun").value; loadLogs(); });
+
+$("#jobsBody").addEventListener("click", async (ev) => {
+  const btn = ev.target.closest("[data-act]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const act = btn.dataset.act;
+  const jobs = (S.config && S.config.config && S.config.config.jobs) || [];
+  const job = jobs.filter((j) => j.id === id)[0];
+  try {
+    if (act === "run") {
+      try {
+        await apiPost("run", { id: id });
+        toast("已加入队列");
+        await refresh(false);
+      } catch (e) {
+        if (e.code === "need_adopt" && job) {
+          if (!confirm("目标目录非空且未标记。\n\n" + job.dest + "\n\n确认接管并开始运行？")) return;
+          await apiPost("adopt", { id: id, source: job.source, dest: job.dest });
+          await apiPost("run", { id: id });
+          toast("已接管并加入队列");
+          await refresh(false);
+        } else {
+          toast(e.message);
+        }
+      }
+    } else if (act === "cancel") {
+      await apiPost("cancel", { id: id });
+      toast("已请求取消");
+      await refresh(false);
+    } else if (act === "toggle") {
+      await apiPost("job_toggle", { id: id });
+      await refresh(true);
+    } else if (act === "mode") {
+      await apiPost("job_mode", { id: id, dry_run: !job.dry_run });
+      await refresh(true);
+    } else if (act === "edit" && job) {
+      openJob(job);
+    } else if (act === "del" && job) {
+      if (!confirm("删除任务「" + (job.name || id) + "」？不会删除磁盘上的数据。")) return;
+      await apiPost("job_delete", { id: id });
+      toast("已删除");
+      await refresh(true);
+    }
+  } catch (e) { toast(e.message); }
+});
+
+$("#runsBody").addEventListener("click", (ev) => {
+  const btn = ev.target.closest('[data-act="log"]');
+  if (!btn) return;
+  S.logJob = btn.dataset.job;
+  S.logFile = btn.dataset.file;
+  activateTab("logs");
+});
+
+$$("[data-browse]").forEach((b) => b.addEventListener("click", () => openBrowse(b.dataset.browse)));
+$("#browseList").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-path]");
+  if (b) loadBrowse(b.dataset.path).catch((e) => toast(e.message));
+});
+$("#browseUp").addEventListener("click", async () => {
+  try {
+    const data = await apiGet("browse", { path: S.browsePath });
+    if (data.parent) await loadBrowse(data.parent);
+  } catch (e) { toast(e.message); }
+});
+$("#browsePick").addEventListener("click", pickBrowse);
+$("#browseCancel").addEventListener("click", () => { $("#browseOverlay").hidden = true; });
+$("#browseClose").addEventListener("click", () => { $("#browseOverlay").hidden = true; });
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refresh(false).catch(() => {});
+});
+
+/* ---------------- 启动 ---------------- */
+const hash = location.hash || "";
+const editId = (hash.match(/^#job=(.+)$/) || [])[1] || "";
+const initTab = editId ? "" : hash.replace("#", "");
+if (initTab) activateTab(initTab);
+refresh(true).then(() => {
+  if (editId && S.config) {
+    const job = ((S.config.config && S.config.config.jobs) || []).filter((j) => j.id === editId)[0];
+    if (job) openJob(job);
+  }
+  if (S.status && S.status.runner && S.status.runner.running) loadRuns();
+});
+S.timer = setInterval(() => {
+  if (!document.hidden) refresh(false).catch(() => {});
+}, 5000);
+</script>
+</body>
+</html>

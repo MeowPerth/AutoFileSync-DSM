@@ -1,0 +1,10 @@
+[
+  {
+    "step_title": "AutoFileSync 安裝提示",
+    "items": [
+      {
+        "desc": "安裝完成後，請在 <b>「權限管理器」（SimplePermissionManager）</b> 中授權 <b>AutoFileSync</b>。<br><br>未授權也可以使用，但同步會以 <b>sc-autofilesync</b> 身分執行：無法保留 uid/gid/ACL，且可能無法讀取或刪除不屬於該使用者的檔案。<br><br>如果尚未安裝權限管理器，請先從套件中心安裝 SimplePermissionManager。"
+      }
+    ]
+  }
+]

@@ -1,0 +1,238 @@
+{
+  "schema": 1,
+  "settings": {
+    "concurrency": 1,
+    "rsync_path": "",
+    "run_missed_on_start": true,
+    "trash_enabled": true,
+    "trash_retention_days": 30,
+    "log_retention_days": 30,
+    "notify_on": "failure",
+    "notify_users": [
+      "@administrators"
+    ],
+    "first_run_preview": true,
+    "default_excludes": [
+      "@eaDir/",
+      "#recycle/",
+      "#snapshot/",
+      "@tmp/",
+      ".DS_Store",
+      "Thumbs.db",
+      "*.sock",
+      "*.pid"
+    ]
+  },
+  "jobs": [
+    {
+      "id": "j-deepseek-harness",
+      "name": "Deepseek-Harness",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/Deepseek-Harness",
+      "dest": "/volume2/Docker-BAK/Deepseek-Harness",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    },
+    {
+      "id": "j-jellyfin",
+      "name": "Jellyfin",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/Jellyfin",
+      "dest": "/volume2/Docker-BAK/Jellyfin",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    },
+    {
+      "id": "j-llamacpp",
+      "name": "llama.cpp",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/llama.cpp",
+      "dest": "/volume2/Docker-BAK/llama.cpp",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    },
+    {
+      "id": "j-comfyui",
+      "name": "ComfyUI",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/ComfyUI",
+      "dest": "/volume2/Docker-BAK/ComfyUI",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    },
+    {
+      "id": "j-hermes-agent",
+      "name": "Hermes-Agent",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/Hermes-Agent",
+      "dest": "/volume2/Docker-BAK/Hermes-Agent",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    },
+    {
+      "id": "j-newapi",
+      "name": "NewAPI",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/NewAPI",
+      "dest": "/volume2/Docker-BAK/NewAPI",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    },
+    {
+      "id": "j-strata",
+      "name": "Strata",
+      "enabled": false,
+      "source": "/volume3/Docker-SSD/Strata",
+      "dest": "/volume2/Docker-BAK/Strata",
+      "delete": true,
+      "delete_excluded": false,
+      "keep_newer": false,
+      "dry_run": true,
+      "exclude": [],
+      "max_delete": 500,
+      "checksum": false,
+      "bwlimit_kb": 0,
+      "schedule": {
+        "mode": "daily",
+        "time": "03:30",
+        "weekdays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "created_at": 1762521600,
+      "updated_at": 1762521600
+    }
+  ]
+}

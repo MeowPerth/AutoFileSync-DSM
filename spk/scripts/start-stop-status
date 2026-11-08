@@ -1,0 +1,90 @@
+#!/bin/sh
+# AutoFileSync start/stop/status/log（对齐 spksrc 通用脚本语义，单 PID 简化版）
+# DSM7 下本脚本以 conf/privilege 的 run-as=root 运行
+DNAME="${SYNOPKG_PKGNAME:-autofilesync}"
+[ -n "${SYNOPKG_PKGVAR}" ] || SYNOPKG_PKGVAR="${SYNOPKG_PKGDEST}/var"
+
+SVC_SETUP="$(dirname "$0")/service-setup"
+[ -r "${SVC_SETUP}" ] && . "${SVC_SETUP}"
+
+LOG_FILE="${LOG_FILE:-${SYNOPKG_PKGVAR}/${DNAME}.log}"
+PID_FILE="${PID_FILE:-${SYNOPKG_PKGVAR}/${DNAME}.pid}"
+
+daemon_status ()
+{
+    [ -r "${PID_FILE}" ] || return 1
+    _pid=$(cat "${PID_FILE}" 2>/dev/null)
+    [ -n "${_pid}" ] || return 1
+    kill -0 "${_pid}" 2>/dev/null
+}
+
+call_func ()
+{
+    FUNC=$1
+    if command -v "${FUNC}" >/dev/null 2>&1; then
+        echo "Begin ${FUNC}" >> "${LOG_FILE}"
+        eval "${FUNC}" >> "${LOG_FILE}" 2>&1
+        echo "End ${FUNC}" >> "${LOG_FILE}"
+    fi
+}
+
+case "$1" in
+    start)
+        if daemon_status; then
+            echo "${DNAME} is already running" >> "${LOG_FILE}"
+            exit 0
+        fi
+        # 服务日志封顶 256KiB：超限保留尾部 128KiB
+        if [ -f "${LOG_FILE}" ] && [ "$(wc -c < "${LOG_FILE}" 2>/dev/null || echo 0)" -gt 262144 ]; then
+            tail -c 131072 "${LOG_FILE}" > "${LOG_FILE}.tmp" 2>/dev/null \
+                && mv -f "${LOG_FILE}.tmp" "${LOG_FILE}"
+        fi
+        date > "${LOG_FILE}"
+        echo "Starting ${DNAME} ..." >> "${LOG_FILE}"
+        call_func service_prestart
+        PYTHONUNBUFFERED=1 ${SERVICE_COMMAND} >> "${LOG_FILE}" 2>&1 &
+        echo $! > "${PID_FILE}"
+        sleep 2
+        if ! daemon_status; then
+            echo "ERROR: ${DNAME} failed to start" >> "${LOG_FILE}"
+            rm -f "${PID_FILE}"
+            exit 1
+        fi
+        echo "${DNAME} started (pid $(cat "${PID_FILE}"))" >> "${LOG_FILE}"
+        exit 0
+        ;;
+    stop)
+        if ! daemon_status; then
+            echo "${DNAME} is not running" >> "${LOG_FILE}"
+            rm -f "${PID_FILE}"
+            exit 0
+        fi
+        echo "Stopping ${DNAME} ..." >> "${LOG_FILE}"
+        kill -TERM "$(cat "${PID_FILE}")" 2>/dev/null
+        _i=0
+        while daemon_status && [ "${_i}" -lt 20 ]; do
+            sleep 1; _i=$((_i + 1))
+        done
+        if daemon_status; then
+            kill -KILL "$(cat "${PID_FILE}")" 2>/dev/null
+        fi
+        rm -f "${PID_FILE}"
+        call_func service_poststop
+        exit 0
+        ;;
+    status)
+        if daemon_status; then
+            echo "${DNAME} is running"
+            exit 0
+        fi
+        echo "${DNAME} is not running"
+        exit 3
+        ;;
+    log)
+        if [ -r "${LOG_FILE}" ]; then
+            tail -n 100 "${LOG_FILE}"
+        fi
+        exit 0
+        ;;
+esac
+exit 1
