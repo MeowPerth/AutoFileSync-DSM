@@ -131,6 +131,10 @@ AutoFileSync-DSM/
 - 通知仅限 DSM 桌面通知，不发送邮件
 - 并发数上限为 3；目标盘相同时并行不一定更快
 
+## 开发与维护
+
+项目目标、验证环境、Git 流程、版本规则与安装/卸载向导说明见 [docs/PROJECT.md](docs/PROJECT.md)。
+
 ## License
 
 [MIT](LICENSE)
