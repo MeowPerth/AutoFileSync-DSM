@@ -767,12 +767,15 @@ class Runner:
         except (TypeError, ValueError):
             return 1
 
-    def enqueue(self, job_id, dry_run, reason="manual"):
+    def enqueue(self, job_id, dry_run, reason="manual", max_delete=None):
         with self.lock:
             if job_id in self.active or job_id in self.queued:
                 raise ApiError("该任务正在运行或排队中")
             self.queued.append(job_id)
-        self.q.put({"id": job_id, "dry_run": bool(dry_run), "reason": reason})
+        item = {"id": job_id, "dry_run": bool(dry_run), "reason": reason}
+        if max_delete is not None:
+            item["max_delete"] = int(max_delete)
+        self.q.put(item)
         return True
 
     def cancel(self, job_id):
@@ -897,15 +900,19 @@ class Runner:
                 return
 
             rollback = None
+            override = item.get("max_delete")
             try:
-                max_delete = int(job.get("max_delete", 0) or 0)
+                max_delete = (int(override) if override is not None
+                              else int(job.get("max_delete", 0) or 0))
             except (TypeError, ValueError):
                 max_delete = 0
+            self._log_line(log_path, "max_delete=%d%s" % (
+                max_delete, " (one-time override)" if override is not None else ""))
             if (not dry_run and job.get("delete") and max_delete > 0
                     and job.get("rollback", True)):
                 rollback = self._prepare_rollback(job, log_path)
 
-            argv = self._build_argv(job, dry_run)
+            argv = self._build_argv(job, dry_run, max_delete=max_delete)
             cmd = self.ctx["priv"].wrap(argv)
             self._log_line(log_path, "cmd: " + " ".join(self._quote(c) for c in cmd))
             env = dict(os.environ)
@@ -1088,7 +1095,7 @@ class Runner:
 
         return errors
 
-    def _build_argv(self, job, dry_run):
+    def _build_argv(self, job, dry_run, max_delete=None):
         cfg = self.ctx["config"].get()
         settings = cfg.get("settings") or {}
         rsync = (job.get("rsync_path") or settings.get("rsync_path") or find_rsync())
@@ -1119,7 +1126,10 @@ class Runner:
         if job.get("delete_excluded"):
             args.append("--delete-excluded")
         try:
-            max_delete = int(job.get("max_delete", 0) or 0)
+            if max_delete is None:
+                max_delete = int(job.get("max_delete", 0) or 0)
+            else:
+                max_delete = int(max_delete)
         except (TypeError, ValueError):
             max_delete = 0
         if max_delete > 0:
@@ -1885,7 +1895,15 @@ def build_app(var, cfg_path):
                 "目标目录非空且没有 .autofilesync-target 标记：%s" % job.get("dest")
             ], code="need_adopt")
         dry = payload.get("dry_run", job.get("dry_run"))
-        runner.enqueue(jid, bool(dry), "manual")
+        override = payload.get("max_delete")
+        if override is not None:
+            try:
+                override = int(override)
+            except (TypeError, ValueError):
+                raise ApiError("删除上限必须是整数")
+            if override < 0:
+                raise ApiError("删除上限不能为负数")
+        runner.enqueue(jid, bool(dry), "manual", max_delete=override)
         return {"ok": True}
 
     def do_cancel(payload):

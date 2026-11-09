@@ -663,6 +663,15 @@ function renderRuns() {
   $("#runsEmpty").hidden = runs.length > 0;
   $("#runsBody").innerHTML = runs.map((r) => {
     const file = String(r.log || "").split("/").pop();
+    const jobs = (S.config && S.config.config && S.config.config.jobs) || [];
+    const canOverride = (r.status === "aborted_rolled_back" || r.status === "aborted")
+      && jobs.some((j) => j.id === r.id);
+    let ops = '<button class="btn sm ghost" data-act="log" data-job="' + esc(r.id)
+      + '" data-file="' + esc(file) + '">查看</button>';
+    if (canOverride) {
+      ops += ' <button class="btn sm" data-act="override" data-id="' + esc(r.id)
+        + '">允许本次删除</button>';
+    }
     return "<tr>"
       + "<td>" + esc(fmtTime(r.start)) + "</td>"
       + '<td class="name">' + esc(r.name || r.id) + "</td>"
@@ -670,8 +679,7 @@ function renderRuns() {
       + "<td>" + esc(fmtDur(r.duration || 0)) + "</td>"
       + "<td>" + esc(r.transferred == null ? "—" : r.transferred) + " / " + esc(r.deleted == null ? "—" : r.deleted) + "</td>"
       + "<td>" + badge(r.dry_run ? "预览" : "实跑", r.dry_run ? "warn" : "info") + "</td>"
-      + '<td class="right"><button class="btn sm ghost" data-act="log" data-job="' + esc(r.id)
-      + '" data-file="' + esc(file) + '">查看</button></td>'
+      + '<td class="right">' + ops + "</td>"
       + "</tr>";
   }).join("");
 }
@@ -1048,7 +1056,30 @@ $("#jobsBody").addEventListener("click", async (ev) => {
   } catch (e) { toast(e.message); }
 });
 
-$("#runsBody").addEventListener("click", (ev) => {
+async function overrideRun(id) {
+  const jobs = (S.config && S.config.config && S.config.config.jobs) || [];
+  const job = jobs.filter((j) => j.id === id)[0];
+  if (!job) { toast("任务不存在"); return; }
+  const cur = Number(job.max_delete || 0);
+  const def = cur > 0 ? Math.max(cur * 2, 2000) : 2000;
+  const raw = prompt("「" + (job.name || id) + "」本次允许删除上限（条，0=不限）：", String(def));
+  if (raw === null) return;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) { toast("请输入 >=0 的整数"); return; }
+  const tip = n === 0
+    ? "0 = 不限；本次不会创建回滚快照，删除不可恢复。"
+    : "本次运行使用上限 " + n + " 条；任务配置仍为 " + cur + " 条，不会被修改。";
+  if (!confirm("确认立即实跑「" + (job.name || id) + "」？\n\n" + tip)) return;
+  try {
+    await apiPost("run", { id: id, max_delete: n, dry_run: false });
+    toast("已加入运行队列");
+    await refresh(true);
+  } catch (e) { toast("运行失败：" + e.message); }
+}
+
+$("#runsBody").addEventListener("click", async (ev) => {
+  const over = ev.target.closest('[data-act="override"]');
+  if (over) { await overrideRun(over.dataset.id); return; }
   const btn = ev.target.closest('[data-act="log"]');
   if (!btn) return;
   S.logJob = btn.dataset.job;
