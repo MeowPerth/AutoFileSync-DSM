@@ -3,7 +3,7 @@
     "step_title": "AutoFileSync 安装提示",
     "items": [
       {
-        "desc": "安装完成后，请在 <b>「权限管理器」（SimplePermissionManager）</b> 中授权 <b>AutoFileSync</b>。<br><br>未授权也可以使用，但同步会以 <b>sc-autofilesync</b> 身份运行：无法保留 uid/gid/ACL，且可能无法读取或删除不属于该用户的文件。<br><br>如果尚未安装权限管理器，请先从套件中心安装 SimplePermissionManager。"
+        "desc": "安装完成后，请在 <b>「权限管理器」（SimplePermissionManager）</b> 中授权 <b>AutoFileSync</b> 套件（对应包用户 sc-autofilesync）。通常授权套件即可；如果 SPM 把套件和用户分开显示，确认 sc-autofilesync 也是启用状态。<br><br>未授权也可以使用，但同步会以 <b>sc-autofilesync</b> 身份运行：无法保留 uid/gid/ACL，且可能无法读取或删除不属于该用户的文件。<br><br>如果尚未安装权限管理器，请先从套件中心安装 SimplePermissionManager。"
       }
     ]
   }

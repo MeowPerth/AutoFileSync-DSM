@@ -38,6 +38,7 @@ done
 
 echo "==> 组装 package.tgz 内容"
 install -m 755 "$ROOT/src/bin/autofilesync-daemon.py" "$STAGE/bin/autofilesync-daemon.py"
+install -m 755 "$ROOT/src/bin/afs-rollback.py"        "$STAGE/bin/afs-rollback.py"
 install -m 755 "$ROOT/src/ui/api.cgi"                 "$STAGE/ui/api.cgi"
 install -m 644 "$ROOT/src/ui/index.html"              "$STAGE/ui/index.html"
 install -m 644 "$ROOT/src/ui/config"                  "$STAGE/ui/config"

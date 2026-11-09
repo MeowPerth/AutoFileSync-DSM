@@ -1138,6 +1138,7 @@ class Runner:
         return args
 
     # ---------------- 删除超限回滚 ----------------
+    # ---------------- 删除超限回滚 ----------------
     def _store_root(self, job):
         return os.path.join(job["dest"], TRASH_DIR)
 
@@ -1146,21 +1147,33 @@ class Runner:
         return os.path.join(self._store_root(job),
                             "%s-%s-%s" % (job["id"], stamp, uuid.uuid4().hex[:4]))
 
-    def _prune_stores(self, job):
-        root = self._store_root(job)
-        if not os.path.isdir(root):
-            return
-        cutoff = time.time() - 86400
+    def _helper(self, *args, timeout=3600):
+        helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "afs-rollback.py")
+        if not os.path.isfile(helper):
+            raise ApiError("回滚辅助程序缺失：%s" % helper)
         try:
-            for name in os.listdir(root):
-                path = os.path.join(root, name)
-                try:
-                    if os.path.isdir(path) and os.stat(path).st_mtime < cutoff:
-                        shutil.rmtree(path, ignore_errors=True)
-                except OSError:
-                    pass
-        except OSError:
-            pass
+            proc = self.ctx["priv"].run([sys.executable, helper] + [str(a) for a in args],
+                                        timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise ApiError("回滚辅助程序超时")
+        stdout = (proc.stdout or b"").decode("utf-8", "replace")
+        stderr = (proc.stderr or b"").decode("utf-8", "replace")
+        data = None
+        for line in reversed(stdout.splitlines()):
+            try:
+                data = json.loads(line)
+                break
+            except ValueError:
+                continue
+        if proc.returncode != 0 or not data or not data.get("ok"):
+            raise ApiError((data or {}).get("error") or stderr.strip() or "回滚辅助程序失败")
+        return data
+
+    def _prune_stores(self, job):
+        try:
+            self._helper("prune", self._store_root(job), "86400", timeout=120)
+        except ApiError as exc:
+            log.warning("清理回滚快照失败：%s", exc.message)
 
     def _scan_deletions(self, job, log_path):
         argv = [a for a in self._build_argv(job, dry_run=True)
@@ -1196,100 +1209,47 @@ class Runner:
             paths.append(rel)
         return paths
 
-    def _snapshot_deletions(self, job, store, paths, log_path):
-        dest = job["dest"]
-        count = 0
-        for rel in paths:
-            src = os.path.normpath(os.path.join(dest, rel))
-            try:
-                if os.path.commonpath([dest, src]) != dest:
-                    continue
-            except ValueError:
-                continue
-            if not os.path.lexists(src):
-                continue
-            dst = os.path.join(store, rel)
-            parent = os.path.dirname(dst)
-            try:
-                if parent:
-                    os.makedirs(parent, exist_ok=True)
-                if os.path.islink(src):
-                    if not os.path.lexists(dst):
-                        os.symlink(os.readlink(src), dst)
-                elif os.path.isdir(src):
-                    os.makedirs(dst, exist_ok=True)
-                    try:
-                        shutil.copystat(src, dst)
-                    except OSError:
-                        pass
-                else:
-                    if not os.path.lexists(dst):
-                        try:
-                            os.link(src, dst)
-                        except OSError:
-                            shutil.copy2(src, dst)
-                    count += 1
-            except OSError as exc:
-                raise ApiError("回滚快照失败：%s（%s）" % (rel, exc))
-        return count
-
     def _prepare_rollback(self, job, log_path):
         self._prune_stores(job)
         paths = self._scan_deletions(job, log_path)
         if not paths:
             return None
         store = self._new_store(job)
-        os.makedirs(store, exist_ok=True)
+        listfile = os.path.join(self.var, "rollback-%s.list" % uuid.uuid4().hex)
         try:
-            files = self._snapshot_deletions(job, store, paths, log_path)
-        except Exception:
-            shutil.rmtree(store, ignore_errors=True)
+            with open(listfile, "w", encoding="utf-8") as fh:
+                fh.write("\n".join(paths) + "\n")
+            data = self._helper("snapshot", job["dest"], store, listfile, timeout=600)
+        except OSError as exc:
+            raise ApiError("回滚快照失败：%s" % exc)
+        except ApiError:
+            self._cleanup_store(store)
             raise
+        finally:
+            try:
+                os.unlink(listfile)
+            except OSError:
+                pass
+        files = int(data.get("files") or 0)
         self._log_line(log_path, "[ROLLBACK] 预检删除 %d 项，已快照 %d 个文件 → %s"
                        % (len(paths), files, store))
         return {"store": store, "planned": len(paths), "files": files}
 
     def _restore_rollback(self, job, store, log_path):
-        dest = job["dest"]
         if not os.path.isdir(store):
             return 0
-        count = 0
-        for root, dirs, files in os.walk(store):
-            rel = os.path.relpath(root, store)
-            target = dest if rel == "." else os.path.join(dest, rel)
-            try:
-                if not os.path.isdir(target):
-                    os.makedirs(target, exist_ok=True)
-                    try:
-                        shutil.copystat(root, target)
-                    except OSError:
-                        pass
-                for name in files:
-                    src = os.path.join(root, name)
-                    dst = os.path.join(target, name)
-                    if os.path.lexists(dst):
-                        continue
-                    if os.path.islink(src):
-                        os.symlink(os.readlink(src), dst)
-                    else:
-                        try:
-                            os.link(src, dst)
-                        except OSError:
-                            shutil.copy2(src, dst)
-                    count += 1
-            except OSError as exc:
-                raise ApiError("回滚恢复失败：%s（%s）" % (rel, exc))
+        data = self._helper("restore", job["dest"], store, timeout=600)
+        count = int(data.get("files") or 0)
         self._log_line(log_path, "[ROLLBACK] 已恢复 %d 个文件" % count)
         return count
 
     def _cleanup_store(self, store):
         if not store:
             return
-        shutil.rmtree(store, ignore_errors=True)
         try:
-            os.rmdir(os.path.dirname(store))
-        except OSError:
-            pass
+            self._helper("cleanup", store, timeout=120)
+        except ApiError as exc:
+            log.warning("清理回滚快照失败：%s", exc.message)
 
     def _finish(self, job, dry_run, started, log_path, rel_log,
                 status, exit_code, errors=None, reason="", rolled_back=0, rollback_store=""):

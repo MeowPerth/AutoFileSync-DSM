@@ -3,7 +3,7 @@
     "step_title": "AutoFileSync installation notes",
     "items": [
       {
-        "desc": "After installation, authorize <b>AutoFileSync</b> in <b>SimplePermissionManager</b>.<br><br>Without authorization it still works, but sync runs as <b>sc-autofilesync</b>, cannot preserve uid/gid/ACL, and may be unable to read or delete files not owned by that user.<br><br>If SimplePermissionManager is not installed, install it from Package Center first."
+        "desc": "After installation, authorize the <b>AutoFileSync</b> package in <b>SimplePermissionManager</b> (maps to package user sc-autofilesync). Authorizing the package is usually enough; if SPM lists packages and users separately, make sure sc-autofilesync is enabled too.<br><br>Without authorization it still works, but sync runs as <b>sc-autofilesync</b>, cannot preserve uid/gid/ACL, and may be unable to read or delete files not owned by that user.<br><br>If SimplePermissionManager is not installed, install it from Package Center first."
       }
     ]
   }

@@ -55,10 +55,24 @@
 
 DSM 7 要求第三方套件以 `package` 用户运行，因此套件本身不使用 `run-as: root`。
 
-需要 root 的操作（保留 uid/gid/ACL、删除目标端文件等）通过 **SimplePermissionManager** 提供的 `spm-exec` 执行：
+需要 root 的操作（保留 uid/gid/ACL、删除目标端文件等）通过 **SimplePermissionManager** 提供的 `spm-exec` 执行。
 
-- 首次安装后请在 SimplePermissionManager 中启用 AutoFileSync
+在 SPM 中授权 **AutoFileSync** 套件即可；SPM 会把它映射到包用户 `sc-autofilesync`（uid），`spm-exec` 最终按该 uid 校验。
+
+- 通常只需要在 SPM 中勾选 AutoFileSync 套件
+- 如果 SPM 把「套件」和「用户」分成两个列表，确认 `sc-autofilesync` 也是启用状态即可，不需要额外的特殊操作
 - 未授权时会自动降级为包用户运行（`--no-owner --no-group`），同步仍可工作，但无法完整保留属主信息
+
+> 注意：授权是按 uid 绑定的。卸载重装后如果包用户 uid 变化，旧授权可能失效，需要重新勾选一次 AutoFileSync。
+
+验证当前是否真的拿到 root：
+
+```bash
+id sc-autofilesync
+sudo -u sc-autofilesync /usr/local/bin/spm-exec id   # 输出 uid=0 才算生效
+```
+
+应用内「设置 → 运行环境 → 特权模式」会实际调用 `spm-exec id` 探测，显示的 `root（spm-exec）` 就是当前真实状态，不是配置缓存。
 
 ## 快速开始
 

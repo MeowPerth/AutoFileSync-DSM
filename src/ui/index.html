@@ -937,10 +937,10 @@ async function refresh(full) {
       const tip = pv.available
         ? "<b>未授权 root（可选）</b>：同步仍可使用，但会以 <code>sc-autofilesync</code> 运行，"
           + "无法保留 uid/gid/ACL，且可能无法读取或删除不属于该用户的文件。"
-          + "请在「权限管理器」（SimplePermissionManager）中授权 AutoFileSync。"
+          + "请在「权限管理器」（SimplePermissionManager）中授权 AutoFileSync 套件（对应包用户 sc-autofilesync）。"
         : "<b>未检测到权限管理器</b>：同步会以 <code>sc-autofilesync</code> 运行，"
           + "无法保留 uid/gid/ACL，且可能无法读取或删除不属于该用户的文件。"
-          + "请先安装 SimplePermissionManager，再授权 AutoFileSync。";
+          + "请先安装 SimplePermissionManager，再授权 AutoFileSync 套件。";
       showBanner(tip, true);
     } else {
       hideBanner();
