@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 PKG_NAME="autofilesync"
-VERSION="1.0.0"
+VERSION="1.0.1"
 ARCH="noarch"
 SPK_FILE="${ROOT}/dist/${PKG_NAME}_${ARCH}-dsm7_${VERSION}.spk"
 

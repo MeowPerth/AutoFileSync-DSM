@@ -36,7 +36,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 PKG_NAME = "autofilesync"
 APP_ID = "MeowPerth.AutoFileSync"
-PKG_VERSION = "1.0.0"
+PKG_VERSION = "1.0.1"
 SCHEMA = 2
 
 DEFAULT_VAR = "/var/packages/autofilesync/var"
