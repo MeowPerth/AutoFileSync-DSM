@@ -36,7 +36,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 PKG_NAME = "autofilesync"
 APP_ID = "MeowPerth.AutoFileSync"
-PKG_VERSION = "1.0.1"
+PKG_VERSION = "1.0.2"
 SCHEMA = 2
 
 DEFAULT_VAR = "/var/packages/autofilesync/var"
@@ -623,6 +623,39 @@ class Priv:
 
 
 # ------------------------------------------------------------------ 工具 ----
+def volume_identity(path):
+    """返回挂载点/设备/UUID；UUID 用于跨重启识别同一文件系统。"""
+    info = {"mount": "", "source": "", "uuid": "", "fstype": ""}
+    try:
+        target = os.path.realpath(path)
+        best = None
+        with open("/proc/mounts", encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) < 4:
+                    continue
+                mp = parts[1].replace("\\040", " ")
+                if target == mp or target.startswith(mp.rstrip("/") + "/"):
+                    if best is None or len(mp) > len(best[0]):
+                        best = (mp, parts[0], parts[2])
+        if not best:
+            return info
+        info["mount"], info["source"], info["fstype"] = best
+        src = info["source"]
+        if src.startswith("/dev/"):
+            blkid = shutil.which("blkid") or "/usr/sbin/blkid"
+            try:
+                proc = subprocess.run([blkid, "-s", "UUID", "-o", "value", src],
+                                      capture_output=True, text=True, timeout=5)
+                if proc.returncode == 0:
+                    info["uuid"] = (proc.stdout or "").strip()
+            except (OSError, subprocess.SubprocessError):
+                pass
+    except OSError:
+        pass
+    return info
+
+
 def on_mounted_volume(path):
     if os.environ.get("AFS_TEST_ALLOW") == "1":
         return True
@@ -1074,17 +1107,35 @@ class Runner:
                         "created_at": now_ts(),
                     }, ensure_ascii=False, indent=2) + "\n"):
                         errors.append("无法写入目标标记（权限不足）：%s" % marker)
-            recorded = self.ctx["state"].snapshot().get("jobs", {}).get(
-                job.get("id"), {}).get("dest_dev")
+            rec = self.ctx["state"].snapshot().get("jobs", {}).get(job.get("id"), {})
+            recorded = rec.get("dest_dev")
+            rec_uuid = rec.get("dest_uuid") or ""
+            rec_src = rec.get("dest_src") or ""
             try:
                 dev = os.stat(dst).st_dev
             except OSError:
                 dev = None
-            if recorded is not None and dev is not None and int(recorded) != int(dev):
-                errors.append("目标卷身份变化（可能未挂载或已更换磁盘），已拒绝执行")
-            elif recorded is None and dev is not None:
-                self.ctx["state"].update(lambda d: d.setdefault("jobs", {}).setdefault(
-                    job.get("id"), {}).update({"dest_dev": int(dev)}))
+            vin = volume_identity(dst)
+            now_uuid = vin.get("uuid") or ""
+            now_src = vin.get("source") or ""
+            mismatch = False
+            if rec_uuid and now_uuid:
+                mismatch = rec_uuid != now_uuid
+            elif rec_src and now_src:
+                mismatch = rec_src != now_src
+            if mismatch:
+                errors.append("目标卷身份变化（UUID/设备不匹配，可能已更换磁盘），已拒绝执行")
+            else:
+                if recorded is not None and dev is not None and int(recorded) != int(dev):
+                    log.warning("目标卷 st_dev 变化（重启/重挂载）：%s %s -> %s，按 UUID/设备确认同一卷",
+                                dst, recorded, dev)
+                if dev is not None:
+                    self.ctx["state"].update(lambda d: d.setdefault("jobs", {}).setdefault(
+                        job.get("id"), {}).update({
+                            "dest_dev": int(dev),
+                            "dest_uuid": now_uuid,
+                            "dest_src": now_src,
+                        }))
             try:
                 sv = os.statvfs(dst)
                 free = sv.f_bavail * sv.f_frsize
