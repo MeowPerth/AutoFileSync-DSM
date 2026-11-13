@@ -449,7 +449,9 @@ textarea.input{height:auto;padding:8px 10px}
   <div class="modal small">
     <div class="modal-head"><h3>选择目录</h3><button class="x" id="browseClose">×</button></div>
     <div class="modal-body">
-      <div class="row"><button class="btn ghost" id="browseUp">↑ 上级</button><span class="mono small" id="browsePath">/</span></div>
+      <div class="row"><button class="btn ghost" id="browseUp">↑ 上级</button>
+        <button class="btn ghost" id="browseNew">+ 新建文件夹</button>
+        <span class="mono small" id="browsePath">/</span></div>
       <div class="dirlist" id="browseList"></div>
     </div>
     <div class="modal-foot"><span class="spacer"></span>
@@ -878,6 +880,7 @@ async function loadBrowse(path) {
   $("#browsePath").textContent = data.path;
   $("#browseUp").disabled = !data.parent;
   $("#browsePick").disabled = data.path === "/";
+  $("#browseNew").disabled = data.path === "/";
   const list = $("#browseList");
   const dirs = data.dirs || [];
   if (!dirs.length) {
@@ -1097,6 +1100,18 @@ $("#browseUp").addEventListener("click", async () => {
     const data = await apiGet("browse", { path: S.browsePath });
     if (data.parent) await loadBrowse(data.parent);
   } catch (e) { toast(e.message); }
+});
+$("#browseNew").addEventListener("click", async () => {
+  if (S.browsePath === "/") { toast("请先进入 /volumeN 下的目录"); return; }
+  const raw = prompt("新建文件夹名称：", "");
+  if (raw === null) return;
+  const name = raw.trim();
+  if (!name) return;
+  try {
+    const d = await apiPost("browse_mkdir", { path: S.browsePath, name: name });
+    toast("已创建：" + (d.path || name));
+    await loadBrowse(d.path || S.browsePath);
+  } catch (e) { toast("新建失败：" + e.message); }
 });
 $("#browsePick").addEventListener("click", pickBrowse);
 $("#browseCancel").addEventListener("click", () => { $("#browseOverlay").hidden = true; });

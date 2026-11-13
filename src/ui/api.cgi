@@ -4,7 +4,7 @@
 
 职责：采集 DSM 会话 + token，按 action 转发到守护进程的 unix socket。
   GET  status|config|about|logs|runs|browse
-  POST job_save|job_delete|job_toggle|settings|run|cancel|adopt|validate|notify_test
+  POST job_save|job_delete|job_toggle|settings|run|cancel|adopt|validate|notify_test|browse_mkdir
 POST 约定：请求体为 JSON {"action": "...", "payload": {...}}（兼容表单 action/payload）。
 输出：恒为 HTTP 200 + JSON（成败在 body 的 ok/error 字段表达）。
 """
@@ -23,7 +23,7 @@ TIMEOUT = 120
 
 GET_ACTIONS = {"status", "config", "about", "logs", "runs", "browse"}
 POST_ACTIONS = {"job_save", "job_delete", "job_toggle", "job_mode", "settings",
-                "run", "cancel", "adopt", "validate", "notify_test"}
+                "run", "cancel", "adopt", "validate", "notify_test", "browse_mkdir"}
 
 
 def emit(obj, code=b"200 OK"):

@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 PKG_NAME="autofilesync"
-VERSION="1.0.2"
+VERSION="1.0.3"
 ARCH="noarch"
 SPK_FILE="${ROOT}/dist/${PKG_NAME}_${ARCH}-dsm7_${VERSION}.spk"
 
@@ -39,6 +39,7 @@ done
 echo "==> 组装 package.tgz 内容"
 install -m 755 "$ROOT/src/bin/autofilesync-daemon.py" "$STAGE/bin/autofilesync-daemon.py"
 install -m 755 "$ROOT/src/bin/afs-rollback.py"        "$STAGE/bin/afs-rollback.py"
+install -m 755 "$ROOT/src/bin/afs-fs.py"               "$STAGE/bin/afs-fs.py"
 install -m 755 "$ROOT/src/ui/api.cgi"                 "$STAGE/ui/api.cgi"
 install -m 644 "$ROOT/src/ui/index.html"              "$STAGE/ui/index.html"
 install -m 644 "$ROOT/src/ui/config"                  "$STAGE/ui/config"

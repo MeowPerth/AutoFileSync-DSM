@@ -36,7 +36,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 PKG_NAME = "autofilesync"
 APP_ID = "MeowPerth.AutoFileSync"
-PKG_VERSION = "1.0.2"
+PKG_VERSION = "1.0.3"
 SCHEMA = 2
 
 DEFAULT_VAR = "/var/packages/autofilesync/var"
@@ -1780,8 +1780,35 @@ def build_app(var, cfg_path):
         hist = list(reversed(hist))[:limit]
         return {"ok": True, "runs": hist}
 
+    def _fs_helper(*args):
+        helper = os.path.join(os.path.dirname(os.path.abspath(__file__)), "afs-fs.py")
+        if not os.path.isfile(helper):
+            return None
+        priv = get_priv()
+        if not priv.root:
+            return None
+        try:
+            proc = priv.run([sys.executable, helper] + [str(a) for a in args], timeout=30)
+        except subprocess.TimeoutExpired:
+            raise ApiError("目录操作超时")
+        stdout = (proc.stdout or b"").decode("utf-8", "replace")
+        stderr = (proc.stderr or b"").decode("utf-8", "replace")
+        data = None
+        for line in reversed(stdout.splitlines()):
+            try:
+                data = json.loads(line)
+                break
+            except ValueError:
+                continue
+        if proc.returncode != 0 or not data or not data.get("ok"):
+            raise ApiError((data or {}).get("error") or stderr.strip() or "目录操作失败")
+        return data
+
     def browse(query):
         path = (query.get("path") or ["/"])[0]
+        data = _fs_helper("list", path)
+        if data is not None:
+            return data
         if path in ("", "/"):
             dirs = []
             for i in range(1, 65):
@@ -1790,7 +1817,7 @@ def build_app(var, cfg_path):
                     dirs.append({"name": p, "path": p})
             return {"ok": True, "path": "/", "parent": "", "dirs": dirs}
         path = os.path.normpath(path)
-        if not re.match(r"^/volume\d+", path):
+        if not re.match(r"^/volume\d+(/|$)", path):
             raise ApiError("只能浏览 /volumeN 下的目录")
         if not os.path.isdir(path):
             raise ApiError("目录不存在：%s" % path)
@@ -1809,6 +1836,34 @@ def build_app(var, cfg_path):
         entries.sort(key=lambda x: x["name"].lower())
         parent = os.path.dirname(path) if path != "/" else ""
         return {"ok": True, "path": path, "parent": parent, "dirs": entries}
+
+    def browse_mkdir(payload):
+        payload = payload or {}
+        parent = norm_path(payload.get("path"))
+        name = (payload.get("name") or "").strip()
+        data = _fs_helper("mkdir", parent, name)
+        if data is not None:
+            return data
+        if not re.match(r"^/volume\d+(/|$)", parent) or not os.path.isdir(parent):
+            raise ApiError("父目录不存在或不在 /volumeN 下")
+        if not name or name in (".", "..") or "/" in name or "\x00" in name:
+            raise ApiError("文件夹名称不合法")
+        if len(name) > 128:
+            raise ApiError("文件夹名称过长")
+        if name.startswith(("@", "#", ".")):
+            raise ApiError("名称不能以 @ # . 开头")
+        target = os.path.normpath(os.path.join(parent, name))
+        if os.path.dirname(target) != parent:
+            raise ApiError("文件夹名称不合法")
+        if os.path.isdir(target):
+            return {"ok": True, "path": target, "existed": True}
+        if os.path.lexists(target):
+            raise ApiError("同名文件已存在")
+        try:
+            os.mkdir(target)
+        except OSError as exc:
+            raise ApiError("新建文件夹失败：%s" % exc)
+        return {"ok": True, "path": target, "existed": False}
 
     def adopt_required(job):
         dst = job.get("dest")
@@ -2030,6 +2085,7 @@ def build_app(var, cfg_path):
             "adopt": adopt,
             "validate": validate,
             "notify_test": notify_test,
+            "browse_mkdir": browse_mkdir,
         },
     }
 
